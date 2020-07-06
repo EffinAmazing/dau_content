@@ -8,6 +8,7 @@ view: daily_visitors {
           anonymous_id,
           date(received_at) as day
         from ${pages.SQL_TABLE_NAME}
+        --filter here
         group by 1, 2
       ),
       active_visitors as (
@@ -73,19 +74,31 @@ view: daily_visitors {
     sql: timestamp(${TABLE}.day) ;;
   }
 
-  dimension: first_active_day {
-    type: date
+  dimension_group: first_active {
+    timeframes: [date, week, month]
+    type: time
     sql: timestamp(${TABLE}.first_active_day) ;;
   }
 
-  dimension: last_active_day {
-    type: date
+  dimension_group: last_active {
+    timeframes: [date, week, month]
+    type: time
     sql: timestamp(${TABLE}.last_active_day) ;;
   }
 
   dimension: days_since_first_active {
     type: number
     sql: ${TABLE}.days_since_first_active ;;
+  }
+
+  dimension: 7_day_windows_since_first_active {
+    type: number
+    sql: floor(${days_since_first_active}/7.00) ;;
+  }
+
+  dimension: 28_day_windows_since_first_active {
+    type: number
+    sql: floor(${days_since_first_active}/28.00) ;;
   }
 
   dimension: days_since_last_active {
@@ -103,6 +116,13 @@ view: daily_visitors {
     sql: ${TABLE}.days_active_28d_window ;;
   }
 
+  dimension: days_active_28d_tier {
+    type: tier
+    style: integer
+    tiers: [1,2,3,7,14,21]
+    sql: ${days_active_28d_window} ;;
+  }
+
 
   #
   # MEASURES
@@ -110,11 +130,13 @@ view: daily_visitors {
 
   measure: count_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
   }
 
   measure: daily_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -124,6 +146,7 @@ view: daily_visitors {
 
   measure: weekly_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -133,6 +156,7 @@ view: daily_visitors {
 
   measure: monthly_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -142,6 +166,7 @@ view: daily_visitors {
 
   measure: new_daily_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -155,6 +180,7 @@ view: daily_visitors {
 
   measure: new_weekly_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -168,6 +194,7 @@ view: daily_visitors {
 
   measure: new_monthly_active_visitors {
     type: count_distinct
+    drill_fields: [details*]
     sql: ${anonymous_id} ;;
     filters: {
       field: days_since_last_active
@@ -177,6 +204,17 @@ view: daily_visitors {
       field: days_since_first_active
       value: "<28"
     }
+  }
+
+  set: details {
+    fields: [
+      anonymous_id,
+      day,
+      first_active_date,
+      last_active_date,
+      days_active_7d_window,
+      days_active_28d_window
+      ]
   }
 
 }

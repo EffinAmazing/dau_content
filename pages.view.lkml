@@ -3,7 +3,7 @@ view: pages {
     persist_for: "12 hours"
     sql:
       with t as (
-        select *,
+        select id, anonymous_id, received_at,
           row_number() over (partition by id order by loaded_at desc) as rn
         from @{segment_schema_name}.pages
       )
